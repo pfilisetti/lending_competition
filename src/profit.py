@@ -1,17 +1,17 @@
 
 import numpy as np
 import pandas as pd
-import random
+import matplotlib.pyplot as plt
 
-def compute_interest_rate(pd_pred, surplus_rate):
-
-    break_even = pd_pred / (pd_pred + 1)
-    interest_rate = break_even + surplus_rate
-    return interest_rate
+def compute_interest_rate(pd_pred, surplus_rate, eps=1e-6):
+    pdc = np.clip(pd_pred, eps, 1 - eps)
+    break_even = pdc / (1 - pdc)           
+    rate = break_even + surplus_rate
+    return np.clip(rate, 0.0, 1.0)         
 
 def compute_preferences(df):
     # make sure n is divisible by 3, or handle remainder as you like
-    n= len(df) 
+    n= len(df)
     count = n // 3
     remainder = n - 3*count
 
@@ -63,16 +63,33 @@ def compute_profit(default, pd_pred, surplus_rates):
     
     return profits
 
-def compute_profit_distribution(default, pd_pred, min_surplus, max_surplus, num_simulations):
-    
-    profits = np.zeros((3, 3, 3))
-    for _ in range(num_simulations):
-        surplus_rates = [random.uniform(min_surplus, max_surplus) for _ in range(3)]
-        surplus_1 = surplus_rates[0]
-        surplus_2 = surplus_rates[1]
-        surplus_3 = surplus_rates[2]
-        profit = compute_profit(default, pd_pred, surplus_rates)
-        profits[surplus_rates] = profit
+def compute_profit_distribution(default, pd_pred, min_surplus, max_surplus, num_simulations, seed=42):
+    rng = np.random.default_rng(seed)
 
-    return profits
+    # Draw all surplus rates at once: shape (num_simulations, 3)
+    m = rng.uniform(min_surplus, max_surplus, size=(num_simulations, 3))
+
+    profits = np.empty(num_simulations, dtype=float)
+    for i in range(num_simulations):
+        surplus_rates = m[i].tolist()  # [m1, m2, m3]
+        profits[i] = compute_profit(default, pd_pred, surplus_rates)
+
+    df = pd.DataFrame({
+        "m1": m[:, 0],
+        "m2": m[:, 1],
+        "m3": m[:, 2],
+        "profits": profits
+    })
+
+    return df
+
+def plot_profit_distribution(df):
+    y = df["profits"]
+    x = df["m1"]
+    plt.scatter(x, y)
+    plt.xlabel("m1")
+    plt.ylabel("profits")
+    plt.title("Profit Distribution")
+    plt.show()
+    return df
 
