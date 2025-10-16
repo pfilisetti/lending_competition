@@ -91,5 +91,4 @@ def plot_profit_distribution(df):
     plt.ylabel("profits")
     plt.title("Profit Distribution")
     plt.show()
-    return df
 
