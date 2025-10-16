@@ -40,7 +40,6 @@ def split_by_m1_rank(res_df: pd.DataFrame):
     # rank of m1 within the row (1 = lowest, 3 = highest)
     df["rank_m1"] = df[["m1", "m2", "m3"]].rank(axis=1, method="first")["m1"].astype(int)
     df["rank_m1"] = 4 - df["rank_m1"]
-    print(df)
     df_r1 = df[df["rank_m1"] == 1].copy()
     df_r2 = df[df["rank_m1"] == 2].copy()
     df_r3 = df[df["rank_m1"] == 3].copy()

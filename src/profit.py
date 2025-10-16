@@ -95,7 +95,7 @@ def compute_profit_pipe(default, pd_preds, surplus_rates, method="additive"):
     
     return profits
 
-def compute_profit_distribution(default, pd_preds, min_surplus, max_surplus, num_simulations, seed=42):
+def compute_profit_distribution(default, pd_preds, min_surplus, max_surplus, num_simulations,  method="additive", seed=42):
     rng = np.random.default_rng(seed)
 
     # Draw all surplus rates at once: shape (num_simulations, 3)
@@ -105,7 +105,7 @@ def compute_profit_distribution(default, pd_preds, min_surplus, max_surplus, num
     for i in range(num_simulations):
         print(f"{i/num_simulations*100}%")
         surplus_rates = m[i].tolist()  # [m1, m2, m3]
-        profits[i] = compute_profit_pipe(default, pd_preds, surplus_rates)
+        profits[i] = compute_profit_pipe(default, pd_preds, surplus_rates, method)
 
     df = pd.DataFrame({
         "m1": m[:, 0],
