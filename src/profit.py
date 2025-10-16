@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+import random
 
 def compute_interest_rate(pd_pred, surplus_rate):
 
@@ -62,5 +63,16 @@ def compute_profit(default, pd_pred, surplus_rates):
     
     return profits
 
+def compute_profit_distribution(default, pd_pred, min_surplus, max_surplus, num_simulations):
+    
+    profits = np.zeros((3, 3, 3))
+    for _ in range(num_simulations):
+        surplus_rates = [random.uniform(min_surplus, max_surplus) for _ in range(3)]
+        surplus_1 = surplus_rates[0]
+        surplus_2 = surplus_rates[1]
+        surplus_3 = surplus_rates[2]
+        profit = compute_profit(default, pd_pred, surplus_rates)
+        profits[surplus_rates] = profit
 
+    return profits
 
