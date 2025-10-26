@@ -15,6 +15,12 @@ def compute_interest_rate_multiplicative(pd_pred, surplus_rate, eps=1e-6):
     rate = pdc * (1 + surplus_rate)
     return rate
 
+def compute_interest_rate_mixed(pd_pred, fixed_surplus_rate, variable_surplus_rate, eps=1e-6):
+    pdc = np.clip(pd_pred, eps, 1 - eps)
+    break_even = pdc / (1 - pdc)           
+    rate = break_even + fixed_surplus_rate + variable_surplus_rate * pdc
+    return rate
+
 def compute_preferences(df):
     # make sure n is divisible by 3, or handle remainder as you like
     n= len(df)
@@ -73,20 +79,36 @@ def compute_profit(df):
 
 
 
-def compute_profit_pipe(default, pd_preds, surplus_rates, method="additive"):
+def compute_profit_pipe(default, pd_preds, fixed_surplus_rates, variable_surplus_rates, method="additive"):
 
     df = pd.concat([default, pd_preds], axis=1)
     if method == "additive":
         compute_interest_rate = compute_interest_rate_additive
     elif method == "multiplicative":
         compute_interest_rate = compute_interest_rate_multiplicative
+    elif method == "mixed":
+        compute_interest_rate = compute_interest_rate_mixed
     else:
         raise ValueError(f"Invalid method: {method}")
 
-    for i, surplus_rate in enumerate(surplus_rates):
-        pd_pred = pd_preds[f"PD{i+1}"]
-        df[f"lender_{i+1}"] = compute_interest_rate(pd_pred, surplus_rate)
+    if method == "mixed":
+        for i, fixed_surplus_rate in enumerate(fixed_surplus_rates):
+            variable_surplus_rate = variable_surplus_rates[i]
+            pd_pred = pd_preds[f"PD{i+1}"]
+            df[f"lender_{i+1}"] = compute_interest_rate(pd_pred, fixed_surplus_rate, variable_surplus_rate)
     
+    elif method == "additive":
+        for i, fixed_surplus_rate in enumerate(fixed_surplus_rates):
+            pd_pred = pd_preds[f"PD{i+1}"]
+            df[f"lender_{i+1}"] = compute_interest_rate(pd_pred, fixed_surplus_rate)
+    
+    elif method == "multiplicative":
+        for i, variable_surplus_rate in enumerate(variable_surplus_rates):
+            pd_pred = pd_preds[f"PD{i+1}"]
+            df[f"lender_{i+1}"] = compute_interest_rate(pd_pred, variable_surplus_rate)
+    else:
+        raise ValueError(f"Invalid method: {method}")
+
     df = compute_preferences(df)
 
     df = compute_choice(df)
@@ -95,22 +117,27 @@ def compute_profit_pipe(default, pd_preds, surplus_rates, method="additive"):
     
     return profits
 
-def compute_profit_distribution(default, pd_preds, min_surplus, max_surplus, num_simulations,  method="additive", seed=42):
+def compute_profit_distribution(default, pd_preds, min_fixed_surplus, max_fixed_surplus, min_variable_surplus, max_variable_surplus, num_simulations,  method="additive", seed=42):
     rng = np.random.default_rng(seed)
 
     # Draw all surplus rates at once: shape (num_simulations, 3)
-    m = rng.uniform(min_surplus, max_surplus, size=(num_simulations, 3))
+    f_surplus = rng.uniform(min_fixed_surplus, max_fixed_surplus, size=(num_simulations, 3))
+    v_surplus = rng.uniform(min_variable_surplus, max_variable_surplus, size=(num_simulations, 3))
 
     profits = np.empty(num_simulations, dtype=float)
     for i in range(num_simulations):
         print(f"{i/num_simulations*100}%")
-        surplus_rates = m[i].tolist()  # [m1, m2, m3]
-        profits[i] = compute_profit_pipe(default, pd_preds, surplus_rates, method)
+        fixed_surplus_rates = f_surplus[i].tolist()  # [m1, m2, m3]
+        variable_surplus_rates = v_surplus[i].tolist()  # [m1, m2, m3]
+        profits[i] = compute_profit_pipe(default, pd_preds, fixed_surplus_rates, variable_surplus_rates, method)
 
     df = pd.DataFrame({
-        "m1": m[:, 0],
-        "m2": m[:, 1],
-        "m3": m[:, 2],
+        "f1": f_surplus[:, 0],
+        "f2": f_surplus[:, 1],
+        "f3": f_surplus[:, 2],
+        "v1": v_surplus[:, 0],
+        "v2": v_surplus[:, 1],
+        "v3": v_surplus[:, 2],
         "profits": profits
     })
 
